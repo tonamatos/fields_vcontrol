@@ -124,12 +124,13 @@ def compute_padding(message: bytes, algorithm='sha256', output_format='bytes'):
 
 import subprocess
 from pathlib import Path
+from typing import Union # Compatibility with older versions of Python3
 
 def length_extend_sha256(
     digest_hex: str,
     len_padded: int,
     extension_hex: str,
-    binary: str | Path = "./length_ext") -> str:
+    binary: Union[str, Path] = "./length_ext") -> str:
     """
     Run the `length_ext` C program and return the forged digest.
     
@@ -190,7 +191,7 @@ if __name__ == "__main__":
     print("Padding SHA256 in hex:",    compute_padding(message, output_format='hex'))
 
     # A good tool to double check these things is https://stepansnigirev.github.io/visual-sha256/
-
+    print("Now testing attack...")
     msg = b'comment=admin'
     ext = b'&user=attacker'
-    print(test_attack(msg, ext))
+    test_attack(msg, ext)
