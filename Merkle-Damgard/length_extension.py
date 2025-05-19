@@ -21,7 +21,7 @@ def url_format(data: bytes) -> str:
 import hashlib
 import base64
 
-def compute_hash(message: bytes, algorithm='sha256', output_format='hex'):
+def compute_hash(message: bytes, algorithm='sha256', output_format='bytes'):
     '''
     Parameters
     ----------
@@ -69,7 +69,7 @@ def compute_hash(message: bytes, algorithm='sha256', output_format='hex'):
 
 import struct
 
-def compute_padding(message: bytes, algorithm='sha256', output_format='hex'):
+def compute_padding(message: bytes, algorithm='sha256', output_format='bytes'):
     """
     Parameters
     ----------
@@ -122,15 +122,75 @@ def compute_padding(message: bytes, algorithm='sha256', output_format='hex'):
     elif output_format == 'base64':
         return base64.b64encode(padding).decode('utf-8')
 
+import subprocess
+from pathlib import Path
+
+def length_extend_sha256(
+    digest_hex: str,
+    len_padded: int,
+    extension_hex: str,
+    binary: str | Path = "./length_ext") -> str:
+    """
+    Run the `length_ext` C program and return the forged digest.
+    
+    Parameters
+    ----------
+    digest_hex : str
+        64-character hex SHA‑256 of `M || pad(M)`
+    len_padded : int
+        Length of the message (after padding), in bytes
+    extension_hex : str
+        Hex encoding of the data you want to append
+    binary : str or Path
+        Path to the compiled C binary (default: "./length_ext")
+    
+    Returns
+    -------
+    str
+        Forged SHA-256 digest as returned by the C program.
+    """
+    result = subprocess.run(
+        [str(binary), digest_hex, str(len_padded), extension_hex],
+        capture_output=True,
+        check=True,
+        text=True
+    )
+    return result.stdout.strip()
+
+def test_attack(message: bytes, extension: bytes) -> None:
+    # 1) Compute the hash of (message + padding + extension)
+    padding = compute_padding(message)
+    extension_hash = compute_hash(message + padding + extension, output_format='hex')
+    print(f"Conventional extension hash: {extension_hash}")
+
+    # 2) Run the length-extension attack
+    orig_hash = compute_hash(message, output_format='hex')
+    attack_hash = length_extend_sha256(
+        orig_hash,
+        len(message + padding),
+        extension.hex(),
+        './length_ext'
+    )
+    print(f"Length extension attack hash: {attack_hash}")
+
+    # 3) Check that the forged hash matches
+    assert extension_hash == attack_hash, "Length extension attack failed!"
+    print("Success: hashes match!")
+
+
 if __name__ == "__main__":
 
     message = b'This message is to test the hereby defined functions.'
-    print("URL format:", url_format(message))
+    print("URL format:",               url_format(message))
     print()
-    print("Hash SHA256 in base64:",compute_hash(message, output_format='base64'))
-    print("Hash SHA256 in hex:",compute_hash(message, output_format='hex'))
+    print("Hash SHA256 in base64:",    compute_hash(message,    output_format='base64'))
+    print("Hash SHA256 in hex:",       compute_hash(message,    output_format='hex'))
     print()
-    print("Padding SHA256 in base64:",compute_padding(message, output_format='base64'))
-    print("Padding SHA256 in hex:",compute_padding(message, output_format='hex'))
+    print("Padding SHA256 in base64:", compute_padding(message, output_format='base64'))
+    print("Padding SHA256 in hex:",    compute_padding(message, output_format='hex'))
 
     # A good tool to double check these things is https://stepansnigirev.github.io/visual-sha256/
+
+    msg = b'comment=admin'
+    ext = b'&user=attacker'
+    print(test_attack(msg, ext))
