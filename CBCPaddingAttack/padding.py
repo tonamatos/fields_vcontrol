@@ -11,12 +11,11 @@ def pad_msg(msg: bytes) -> bytes:
 def check_padding(padded_msg: bytes) -> bool:
     '''
     Verifies if the input has valid PKCS#7 padding.
-    Returns True if valid, False otherwise.
     '''
     if not padded_msg or len(padded_msg) == 0:
         return False
 
-    pad_len = padded_msg[-1]
+    pad_len = padded_msg[-1] # Valid padding always ends with the length
 
     # Padding length must be between 1 and BLOCK_SIZE
     if pad_len < 1 or pad_len > BLOCK_SIZE:
@@ -36,14 +35,14 @@ def unpad_msg(padded_msg: bytes) -> bytes:
         raise ValueError("Invalid PKCS#7 padding.")
     
     pad_len = padded_msg[-1]
-    return padded_msg[:-pad_len]
+    return padded_msg[:-pad_len] # Strip padding
 
 
 if __name__ == "__main__":
-    original = b"Secret message"
-    print("")
+    original = b"This is a secret message. If you can read it, someone messed up."
+    print("Message:\t", original)
     padded = pad_msg(original)
-    print(padded)
-    print(check_padding(padded))
+    print("Padded:\t\t", padded)
+    print("Check padding:\t", check_padding(padded))
     unpadded = unpad_msg(padded)
-    print(unpadded)
+    print("Stripped:,\t", unpadded)
