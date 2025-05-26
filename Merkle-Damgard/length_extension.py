@@ -1,3 +1,5 @@
+# The most up-to-date version of this code is found in https://github.com/tonamatos/fields_vcontrol
+
 def url_format(data: bytes) -> str:
     """
     Convert a bytes sequence to its URL-encoded representation by percent-encoding each byte.
@@ -67,6 +69,7 @@ def compute_hash(message: bytes, algorithm='sha256', output_format='bytes'):
     else:
         raise ValueError("Unsupported output format", output_format)
 
+# Struct makes it shorter to handle some of the bytes objects
 import struct
 
 def compute_padding(message: bytes, algorithm='sha256', output_format='bytes'):
@@ -114,7 +117,7 @@ def compute_padding(message: bytes, algorithm='sha256', output_format='bytes'):
     # Step 3: Append the length field
     padding += length_bytes
 
-    # Output formatting
+    # Output formatting depending on requested case
     if output_format == 'bytes':
         return padding
     elif output_format == 'hex':
@@ -124,7 +127,7 @@ def compute_padding(message: bytes, algorithm='sha256', output_format='bytes'):
 
 import subprocess
 from pathlib import Path
-from typing import Union # Compatibility with older versions of Python3
+from typing import Union # Compatibility with older versions of Python3, newer uses |
 
 def length_extend_sha256(
     digest_hex: str,

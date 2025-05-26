@@ -1,3 +1,5 @@
+# The most up-to-date version of this code is found in https://github.com/tonamatos/fields_vcontrol
+
 from padding import unpad_msg
 
 class AESCBCCipher:
