@@ -9,6 +9,7 @@ Created on Wed May 21 17:02:29 2025
 import socket
 import json
 from vaudenayAttack import VaudenayAttack
+from oracles import LocalOracle
 
 class CryptohackClient():
   def __init__(self, hostname, port):
@@ -36,7 +37,8 @@ class CryptohackClient():
       if not packet:
         return None
       data.extend(packet)
-      return bytes(data)
+    
+    return bytes(data)
 
   def json_recv(self):
     line = self.readline()
@@ -48,7 +50,7 @@ class CryptohackClient():
 
 class CryptohackOracle():
   def __init__(self):
-    hostname = "socket.cryptohack.org"
+    hostname = "localhost:13421"
     port = 13421
     self.client = CryptohackClient(hostname, port)
     self.client.connect()
@@ -75,9 +77,14 @@ class CryptohackOracle():
     response = self.client.json_recv()
     return response
 
-oracle = CryptohackOracle()
-attack = VaudenayAttack(oracle)
+if __name__ == "__main__":
+  oracle = CryptohackOracle()
+  #oracle = LocalOracle()
 
-pt = attack.decrypt_ciphertext()
+  attack = VaudenayAttack(oracle)
 
-print(pt)
+  pt = attack.decrypt_ciphertext()
+  print("Recovered plaintext:", pt)
+
+  response = oracle.check_plaintext(pt)
+  print("Server response:", response)

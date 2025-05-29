@@ -100,3 +100,5 @@ Desktop.ini
 # Misc
 *.sqlite3
 test.ipynb
+
+utils

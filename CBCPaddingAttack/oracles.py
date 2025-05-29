@@ -48,37 +48,67 @@ class VaudenayOracle:
         """
         return self._get_ciphertext_fn()
 
-if __name__=="__main__":
-  # 1) Create a key & some plaintext, then encrypt it under AES-CBC + PKCS#7
-  key       = get_random_bytes(16)
-  plaintext = b"Attack at dawn! Here's some test data."
-  iv        = get_random_bytes(16)
-  cipher_enc = AES.new(key, AES.MODE_CBC, iv=iv)
-  ciphertext_body = cipher_enc.encrypt(pad(plaintext, AES.block_size))
-  test_ciphertext = iv + ciphertext_body
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
 
-  # 2) Define the local oracle functions
-  def local_query(ct: bytes) -> bool:
-    """Return True if ct decrypts to correctly-padded plaintext."""
-    iv_, body = ct[:16], ct[16:]
-    cipher = AES.new(key, AES.MODE_CBC, iv=iv_)
-    pt_padded = cipher.decrypt(body)
+class LocalOracle:
+  def __init__(self, key=None):
+    self.key = key or get_random_bytes(16)
+    self.iv = get_random_bytes(16)
+
+  def get_ciphertext(self):
+    pt = b"Test message padded right."
+    cipher = AES.new(self.key, AES.MODE_CBC, self.iv)
+    padded = pad(pt, 16)
+    ct = cipher.encrypt(padded)
+    return self.iv + ct
+
+  def query(self, ciphertext: bytes):
+    iv = ciphertext[:16]
+    ct = ciphertext[16:]
     try:
-      unpad(pt_padded, AES.block_size)
+      cipher = AES.new(self.key, AES.MODE_CBC, iv)
+      pt = cipher.decrypt(ct)
+      unpad(pt, 16)
       return True
     except ValueError:
       return False
 
-  def local_get_ciphertext() -> bytes:
-    """Return the precomputed ciphertext to attack."""
-    return test_ciphertext
+  def check_plaintext(self, pt: bytes):
+    return pt
 
-  # 3) Instantiate and exercise the oracle
-  oracle = VaudenayOracle(query_fn=local_query,
+
+# 1) Create a key & some plaintext, then encrypt it under AES-CBC + PKCS#7
+key       = get_random_bytes(16)
+plaintext = b"Attack at dawn! Here's some test data."
+iv        = get_random_bytes(16)
+cipher_enc = AES.new(key, AES.MODE_CBC, iv=iv)
+ciphertext_body = cipher_enc.encrypt(pad(plaintext, AES.block_size))
+test_ciphertext = iv + ciphertext_body
+
+# 2) Define the local oracle functions
+def local_query(ct: bytes) -> bool:
+  """Return True if ct decrypts to correctly-padded plaintext."""
+  iv_, body = ct[:16], ct[16:]
+  cipher = AES.new(key, AES.MODE_CBC, iv=iv_)
+  pt_padded = cipher.decrypt(body)
+  try:
+    unpad(pt_padded, AES.block_size)
+    return True
+  except ValueError:
+    return False
+  
+def local_get_ciphertext() -> bytes:
+  """Return the precomputed ciphertext to attack."""
+  return test_ciphertext
+
+# 3) Instantiate and exercise the oracle
+oracle = VaudenayOracle(query_fn=local_query,
                           get_ciphertext_fn=local_get_ciphertext)
+ciphertext = oracle.get_ciphertext()
 
-  ciphertext = oracle.get_ciphertext()
-  print("Original padding valid? ", oracle.query(ciphertext))        # → True
+if __name__=="__main__":
+  print("Original padding valid? ", oracle.query(ciphertext))  # → True
 
   # 4) Tamper with one byte and see padding fail
   tampered = bytearray(ciphertext)

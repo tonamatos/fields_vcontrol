@@ -6,7 +6,7 @@ class AESCBCCipher:
 	def __init__(self, block_decryptor):
 		self.block_decrypt = block_decryptor
 
-	def decrypt(self, ciphertext: bytes) -> bytes:
+	def decrypt(self, ciphertext: bytes, unpad=True) -> bytes:
 		"""
 		Decrypts `ciphertext` under CBC. The IV is assumed to be the first 16 bytes of the ciphertext
 		Returns the plaintext with PKCS#7 padding removed.
@@ -25,7 +25,9 @@ class AESCBCCipher:
 			plaintext += plaintext_block
 			previous_block = block
 
-		return unpad_msg(plaintext)
+		if unpad:
+			return unpad_msg(plaintext)
+		return plaintext
 
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
@@ -60,17 +62,17 @@ def aes_cbc_encrypt(key: bytes, message: bytes) -> bytes:
 	cipher = AES.new(key, AES.MODE_CBC, iv)
 	return iv + cipher.encrypt(pad(message, AES.block_size))
 
+def test_cbc():
+	key = bytes(16)
+	messages = [b"a sample message that's more than a block", b"a sample message", b"short"]
+	decryptor = (lambda block: aes_block_decrypt(key, block)) 
+	cbc_cipher = AESCBCCipher(decryptor)
+
+	for m in messages: 
+		ctxt = aes_cbc_encrypt(key, m)
+		assert cbc_cipher.decrypt(ctxt) == m
+
+	print("All assertions passed!")
+
 if __name__ == "__main__":
-	def test_cbc():
-		key = bytes(16)
-		messages = [b"a sample message that's more than a block", b"a sample message", b"short"]
-		decryptor = (lambda block: aes_block_decrypt(key, block)) 
-		cbc_cipher = AESCBCCipher(decryptor)
-
-		for m in messages: 
-			ctxt = aes_cbc_encrypt(key, m)
-			assert cbc_cipher.decrypt(ctxt) == m
-
-		print("All assertions passed!")
-	
 	test_cbc()
