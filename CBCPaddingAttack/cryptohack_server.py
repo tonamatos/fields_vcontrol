@@ -50,7 +50,7 @@ class CryptohackClient():
 
 class CryptohackOracle():
   def __init__(self):
-    hostname = "localhost:13421"
+    hostname = "socket.cryptohack.org" # localhost to run locally
     port = 13421
     self.client = CryptohackClient(hostname, port)
     self.client.connect()

@@ -92,24 +92,24 @@ class VaudenayAttack:
     starting_iv = [0] * 16  # Will store D_K(ct)
     oracle = self._oracle.query
 
-    for pad_val in range(1, 17):
-        # Forge a block that will decrypt to padding ending in pad_val
-        padding_iv = [pad_val ^ b for b in starting_iv]
-        
-        for candidate in range(256):
-            padding_iv[-pad_val] = candidate
-            iv = bytes(padding_iv)
-            if oracle(iv + ct):  # Feed IV || ct to oracle
-                if pad_val == 1:
-                    # Confirm it's not a false positive (like legit padding)
-                    padding_iv[-2] ^= 1
-                    if not oracle(bytes(padding_iv) + ct):
-                        continue
-                break
-        else:
-            raise Exception(f"No valid byte found for pad_val = {pad_val}")
+    for in_pad in range(1, 17):
+      # Forge a block that will decrypt to padding ending in in_pad
+      interm_iv = [in_pad ^ b for b in starting_iv]
+      
+      for i in range(256):
+        interm_iv[-in_pad] = i
+        iv = bytes(interm_iv)
+        if oracle(iv + ct):  # O(r|y) in paper
+          if in_pad == 1:
+            # Rule out false positives
+            interm_iv[-2] ^= 1
+            if not oracle(bytes(interm_iv) + ct):
+              continue
+          break
+      else:
+        raise ValueError(f"No valid byte found for in_pad = {in_pad}")
 
-        starting_iv[-pad_val] = candidate ^ pad_val
+      starting_iv[-in_pad] = i ^ in_pad
 
     return bytes(starting_iv)
 
